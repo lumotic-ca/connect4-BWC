@@ -23,3 +23,29 @@ h1 {
     right: var(--position-x);
   }
 }
+
+.theme-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: 1px solid var(--theme-toggle-border-color);
+  border-radius: 999px;
+  background-color: var(--theme-toggle-background);
+  color: var(--app-text-color);
+  cursor: pointer;
+  transition:
+    background-color 150ms ease-in-out,
+    transform 150ms ease-in-out;
+
+  &:hover {
+    transform: scale(1.05);
+  }
+}
+
+.theme-toggle-icon {
+  font-size: 18px;
+  line-height: 1;
+}

@@ -1,8 +1,5 @@
+import clsx from 'clsx';
 import m from 'mithril';
-import {
-  getChatAudioEnabledPreference,
-  setChatAudioEnabledPreference
-} from '../models/chat-preferences.js';
 
 class ChatBubbleComponent {
   oninit({ attrs: { session } }) {
@@ -14,15 +11,11 @@ class ChatBubbleComponent {
     // Local copy of the room chat history
     this.messages = session.chatMessages ? [...session.chatMessages] : [];
     this.chatMessagesRevision = session.chatMessagesRevision || 0;
-    // User must opt in before notification sounds play
-    this.audioEnabled = getChatAudioEnabledPreference();
-    this.notificationAudio = null;
 
     this.session.on('chat-message', ({ message }) => {
       this.appendMessage(message);
       if (!this.isOpen && !this.isLocalMessage(message)) {
         this.unreadCount += 1;
-        this.playNotificationSound();
       }
       m.redraw();
     });
@@ -32,13 +25,6 @@ class ChatBubbleComponent {
     if ((session.chatMessagesRevision || 0) !== this.chatMessagesRevision) {
       this.hydrateMessages(session.chatMessages || []);
       this.chatMessagesRevision = session.chatMessagesRevision || 0;
-    }
-  }
-
-  onremove() {
-    if (this.notificationAudio) {
-      this.notificationAudio.pause();
-      this.notificationAudio = null;
     }
   }
 
@@ -79,12 +65,6 @@ class ChatBubbleComponent {
     m.redraw();
   }
 
-  toggleAudio() {
-    this.audioEnabled = !this.audioEnabled;
-    setChatAudioEnabledPreference(this.audioEnabled);
-    m.redraw();
-  }
-
   setDraftMessage(inputEvent) {
     this.draftMessage = inputEvent.target.value;
     inputEvent.redraw = false;
@@ -105,20 +85,6 @@ class ChatBubbleComponent {
     });
   }
 
-  playNotificationSound() {
-    if (!this.audioEnabled) {
-      return;
-    }
-    if (!this.notificationAudio) {
-      this.notificationAudio = new Audio('/sounds/chat-notification.mp3');
-      this.notificationAudio.volume = 0.35;
-    }
-    this.notificationAudio.currentTime = 0;
-    this.notificationAudio.play().catch(() => {
-      // Browsers may block autoplay until the user interacts with the page
-    });
-  }
-
   formatTimestamp(sentAt) {
     return new Date(sentAt).toLocaleTimeString([], {
       hour: 'numeric',
@@ -133,52 +99,47 @@ class ChatBubbleComponent {
           <section className="chat-panel" aria-label="Game chat">
             <header className="chat-panel-header">
               <h2 className="chat-panel-title">Chat</h2>
-              <div className="chat-panel-actions">
-                <button
-                  type="button"
-                  className="chat-audio-toggle"
-                  aria-pressed={this.audioEnabled}
-                  onclick={() => this.toggleAudio()}
-                >
-                  {this.audioEnabled ? 'Sound on' : 'Sound off'}
-                </button>
-                <button
-                  type="button"
-                  className="chat-close-button"
-                  aria-label="Close chat"
-                  onclick={() => this.togglePanel()}
-                >
-                  ×
-                </button>
-              </div>
+              <button
+                type="button"
+                className="chat-close-button"
+                aria-label="Close chat"
+                onclick={() => this.togglePanel()}
+              >
+                ×
+              </button>
             </header>
             <div className="chat-message-list" role="log" aria-live="polite">
               {this.messages.length === 0 ? (
                 <p className="chat-empty-state">No messages yet.</p>
               ) : (
-                this.messages.map((message) => (
-                  <div
-                    className={
-                      message.type === 'system'
-                        ? 'chat-message chat-message-system'
-                        : 'chat-message'
-                    }
-                  >
-                    {message.type === 'system' ? (
-                      <p className="chat-message-text">{message.text}</p>
-                    ) : (
-                      <>
-                        <p className="chat-message-meta">
-                          <span className="chat-message-author">{message.playerName}</span>
-                          <span className="chat-message-time">
+                this.messages.map((message) => {
+                  const isLocal = this.isLocalMessage(message);
+                  const isSystem = message.type === 'system';
+
+                  return (
+                    <div
+                      className={clsx('chat-message-row', {
+                        'chat-message-row-local': isLocal,
+                        'chat-message-row-remote': !isLocal && !isSystem,
+                        'chat-message-row-system': isSystem
+                      })}
+                    >
+                      {isSystem ? (
+                        <p className="chat-message-system-text">{message.text}</p>
+                      ) : (
+                        <div className="chat-message-bubble">
+                          {!isLocal ? (
+                            <p className="chat-message-author">{message.playerName}</p>
+                          ) : null}
+                          <p className="chat-message-text">{message.text}</p>
+                          <p className="chat-message-time">
                             {this.formatTimestamp(message.sentAt)}
-                          </span>
-                        </p>
-                        <p className="chat-message-text">{message.text}</p>
-                      </>
-                    )}
-                  </div>
-                ))
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })
               )}
             </div>
             <form className="chat-input-form" action onsubmit={(event) => this.sendMessage(event)}>
