@@ -135,6 +135,40 @@ class DashboardControlsComponent {
     });
   }
 
+  // Copy the invite link, using a fallback when Clipboard API is unavailable
+  async copyShareLink() {
+    const shareLink = window.location.href;
+    const shareInput = document.getElementById('share-link');
+    let copied = false;
+
+    if (navigator.clipboard?.writeText) {
+      try {
+        await navigator.clipboard.writeText(shareLink);
+        copied = true;
+      } catch {
+        // Clipboard API can fail outside secure contexts; use fallback below.
+      }
+    }
+
+    if (!copied && shareInput) {
+      shareInput.focus();
+      shareInput.select();
+      shareInput.setSelectionRange(0, shareLink.length);
+      copied = document.execCommand('copy');
+    }
+
+    if (copied) {
+      this.copyFeedback = 'Copied!';
+      clearTimeout(this.copyFeedbackTimer);
+      this.copyFeedbackTimer = setTimeout(() => {
+        delete this.copyFeedback;
+        m.redraw();
+      }, DashboardControlsComponent.copyFeedbackDuration);
+    }
+
+    m.redraw();
+  }
+
   setSpectatorName(inputEvent) {
     this.spectatorName = inputEvent.target.value.trim();
     inputEvent.redraw = false;
@@ -192,11 +226,8 @@ class DashboardControlsComponent {
               value={window.location.href}
               onclick={({ target }) => target.select()}
             />
-            <button
-              id="copy-share-link"
-              onclick={() => navigator.clipboard.writeText(window.location.href)}
-            >
-              Copy
+            <button type="button" id="copy-share-link" onclick={() => this.copyShareLink()}>
+              {this.copyFeedback || 'Copy'}
             </button>
           </div>
         ) : this.game.inProgress &&
@@ -275,5 +306,8 @@ class DashboardControlsComponent {
     );
   }
 }
+
+// How long the copy button shows confirmation feedback
+DashboardControlsComponent.copyFeedbackDuration = 2000;
 
 export default DashboardControlsComponent;
