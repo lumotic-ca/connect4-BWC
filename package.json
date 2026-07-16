@@ -1,7 +1,7 @@
 {
-  "name": "connect-four",
+  "name": "connect4-bwc",
   "version": "1.0.0",
-  "description": "A Connect Four web app implemented in JS using Mithril",
+  "description": "A Connect Four web app by Built with Cory (BwC), implemented in JS using Mithril",
   "private": true,
   "type": "module",
   "engines": {
@@ -18,18 +18,20 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/caleb531/connect-four.git"
+    "url": "git+https://github.com/lumotic-ca/connect4-BWC.git"
   },
   "keywords": [
     "connect-four",
-    "mithril"
+    "mithril",
+    "built-with-cory",
+    "bwc"
   ],
-  "author": "Caleb Evans",
+  "author": "Cory (Built with Cory)",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/caleb531/connect-four/issues"
+    "url": "https://github.com/lumotic-ca/connect4-BWC/issues"
   },
-  "homepage": "https://github.com/caleb531/connect-four#readme",
+  "homepage": "https://github.com/lumotic-ca/connect4-BWC#readme",
   "dependencies": {
     "@fontsource/ubuntu": "^5.2.8",
     "clsx": "^2.1.1",

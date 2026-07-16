@@ -5,14 +5,13 @@ export default {
   'style-src': ["'self'", process.env.NODE_ENV !== 'production' ? "'unsafe-inline'" : ''],
   'img-src': ["'self'"],
   'font-src': ["'self'", 'data:'],
-  'script-src': ["'self'", 'https://gc.zgo.at'],
+  'script-src': ["'self'"],
   'connect-src': [
     "'self'",
     'ws://localhost:24678',
     'ws://localhost:8080',
-    'wss://connectfour.calebevans.me',
-    'http://localhost:24678',
-    'https://calebevans-connectfour.goatcounter.com/count'
+    'ws://localhost:9001',
+    'http://localhost:24678'
   ],
   'manifest-src': ["'self'"]
 };

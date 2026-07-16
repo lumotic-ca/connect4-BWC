@@ -6,11 +6,11 @@ test.describe('server player', async () => {
   test('should initialize with arguments', async () => {
     const socket = sinon.stub();
     const player = new Player({
-      name: 'Caleb',
+      name: 'Cory',
       color: 'green',
       socket
     });
-    expect(player).toHaveProperty('name', 'Caleb');
+    expect(player).toHaveProperty('name', 'Cory');
     expect(player).toHaveProperty('color', 'green');
     expect(player).toHaveProperty('socket', socket);
     expect(player).toHaveProperty('score', 0);
@@ -21,7 +21,7 @@ test.describe('server player', async () => {
 
   test('should generate valid v4 UUID', async () => {
     const player = new Player({
-      name: 'Caleb',
+      name: 'Cory',
       color: 'green',
       socket: null
     });
@@ -33,7 +33,7 @@ test.describe('server player', async () => {
   test('should know when socket is connected', async () => {
     const socket = sinon.stub();
     const player = new Player({
-      name: 'Caleb',
+      name: 'Cory',
       color: 'green',
       socket
     });
@@ -42,7 +42,7 @@ test.describe('server player', async () => {
 
   test('should know when socket is not connected', async () => {
     const player = new Player({
-      name: 'Caleb',
+      name: 'Cory',
       color: 'green',
       socket: null
     });
@@ -56,7 +56,7 @@ test.describe('server player', async () => {
       }
     });
     const player = new Player({
-      name: 'Caleb',
+      name: 'Cory',
       color: 'green',
       socket
     });
@@ -71,7 +71,7 @@ test.describe('server player', async () => {
       }
     });
     const localPlayer = new Player({
-      name: 'Caleb',
+      name: 'Cory',
       color: 'green',
       socket
     });
@@ -87,13 +87,13 @@ test.describe('server player', async () => {
   test('should serialize as JSON', async () => {
     const socket = sinon.stub();
     const player = new Player({
-      name: 'Caleb',
+      name: 'Cory',
       color: 'green',
       socket
     });
     const json = player.toJSON();
     expect(json).toHaveProperty('id');
-    expect(json).toHaveProperty('name', 'Caleb');
+    expect(json).toHaveProperty('name', 'Cory');
     expect(json).toHaveProperty('color', 'green');
     expect(json).toHaveProperty('connected', true);
     expect(json).toHaveProperty('lastDisconnectReason', null);

@@ -1,18 +1,29 @@
-<svg viewBox="0 0 224 224" xmlns="http://www.w3.org/2000/svg"  xmlns:xlink="http://www.w3.org/1999/xlink">
+<svg viewBox="0 0 224 224" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
   <defs>
     <circle id="c4-chip" cx="0" cy="0" r="24" stroke-width="4" />
-    <use id="c4-blue-chip" xlink:href="#c4-chip" fill="#abe" stroke="#9ae" />
-    <use id="c4-red-chip" xlink:href="#c4-chip" fill="#eaa" stroke="#d99" />
+    <use id="c4-blue-chip" xlink:href="#c4-chip" fill="#4a90d9" stroke="#2f6fb3" />
+    <use id="c4-red-chip" xlink:href="#c4-chip" fill="#e85d5d" stroke="#c33" />
     <use id="c4-winning-red-chip" xlink:href="#c4-chip" fill="#c33" stroke="#900" />
   </defs>
-  <rect x="0" y="0" width="100%" height="100%" fill="#fff" rx="20" ry="20" />
-  <!-- first column -->
+  <rect x="0" y="0" width="100%" height="100%" fill="#1a1a2e" rx="20" ry="20" />
+  <!-- Connect Four chips in a diagonal win pattern -->
   <use xlink:href="#c4-winning-red-chip" x="48" y="48" />
   <use xlink:href="#c4-blue-chip" x="48" y="112" />
   <use xlink:href="#c4-red-chip" x="48" y="176" />
-  <!-- second column -->
   <use xlink:href="#c4-winning-red-chip" x="112" y="112" />
   <use xlink:href="#c4-blue-chip" x="112" y="176" />
-  <!-- third column -->
   <use xlink:href="#c4-winning-red-chip" x="176" y="176" />
+  <!-- BwC monogram badge -->
+  <text
+    x="112"
+    y="210"
+    text-anchor="middle"
+    font-family="Ubuntu, Arial, sans-serif"
+    font-size="28"
+    font-weight="700"
+    fill="#f4f4f8"
+    letter-spacing="2"
+  >
+    BwC
+  </text>
 </svg>

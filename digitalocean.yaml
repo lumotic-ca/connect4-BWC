@@ -2,27 +2,24 @@ alerts:
   - rule: DEPLOYMENT_FAILED
   - rule: DEPLOYMENT_LIVE
   - rule: DOMAIN_FAILED
-domains:
-  - domain: connectfour.calebevans.me
-    type: PRIMARY
 ingress:
   rules:
     - component:
-        name: connect-four
+        name: connect4-bwc
       match:
         path:
           prefix: /
-name: connect-four
+name: connect4-bwc
 region: sfo
 services:
   - dockerfile_path: Dockerfile
     github:
       branch: main
       deploy_on_push: true
-      repo: caleb531/connect-four
+      repo: lumotic-ca/connect4-BWC
     http_port: 8080
     instance_count: 1
     instance_size_slug: basic-xxs
-    name: connect-four
+    name: connect4-bwc
     run_command: node server/index.js
     source_dir: /

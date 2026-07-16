@@ -17,10 +17,10 @@ class AppComponent {
         {/* The UpdateNotificationComponent manages its own visibility */}
         <UpdateNotificationComponent />
         <span id="personal-site-link" className="nav-link nav-link-left">
-          <a href="https://github.com/caleb531/connect-four">View on GitHub</a>
+          <a href="https://github.com/lumotic-ca/connect4-BWC">View on GitHub</a>
         </span>
         <span id="github-link" className="nav-link nav-link-right">
-          by <a href="https://calebevans.me">Caleb Evans</a>
+          <a href="https://github.com/lumotic-ca">Built with Cory</a>
         </span>
         <GameComponent session={this.session} roomCode={attrs.roomCode} />
       </div>

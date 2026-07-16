@@ -114,7 +114,7 @@ async function createHttpServer() {
   // transformHtml()
   app.get(['/', '/index.html'], async (req, res) => {
     await transformHtml(vite, req, res, indexPath, {
-      pageTitle: 'Caleb Evans'
+      pageTitle: 'Built with Cory'
     });
   });
 

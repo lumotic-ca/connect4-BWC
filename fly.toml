@@ -1,9 +1,9 @@
-# fly.toml app configuration file generated for connect-four on 2024-10-29T02:58:28Z
+# fly.toml app configuration file for connect4-bwc
 #
 # See https://fly.io/docs/reference/configuration/ for information about how to use this file.
 #
 
-app = 'connect-four'
+app = 'connect4-bwc'
 primary_region = 'sjc'
 
 [build]
