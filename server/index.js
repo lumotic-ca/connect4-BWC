@@ -1,8 +1,16 @@
 import open from 'open';
 import { Server } from 'socket.io';
 
+import { CHAT_RATE_LIMIT_MS, createChatMessage, sanitizeChatText } from './chat.js';
 import createHttpServer from './http-server.js';
 import { roomManager } from './room-manager.js';
+
+// Attach chat history to room-related socket responses
+function withChatPayload(room, payload) {
+  return Object.assign(payload, {
+    messages: room.messages
+  });
+}
 
 // Socket.IO server
 async function createServer() {
@@ -33,12 +41,14 @@ async function createServer() {
       console.log(`open room by player ${player.name}`);
       const room = roomManager.openRoom();
       const localPlayer = room.addPlayer({ player, socket });
-      fn({
-        status: 'waitingForPlayers',
-        roomCode: room.code,
-        game: room.game,
-        localPlayer
-      });
+      fn(
+        withChatPayload(room, {
+          status: 'waitingForPlayers',
+          roomCode: room.code,
+          game: room.game,
+          localPlayer
+        })
+      );
     });
 
     socket.on(
@@ -46,9 +56,13 @@ async function createServer() {
       getRoom(({ room, playerId }, fn) => {
         console.log(`join room by ${playerId}`);
         roomManager.markRoomAsActive(room);
+        const reconnectingPlayer = playerId ? room.getPlayerById(playerId) : null;
         const localPlayer = room.connectPlayer({ playerId, socket });
         let status;
         if (localPlayer) {
+          if (reconnectingPlayer) {
+            room.addParticipantListMessage();
+          }
           if (room.players.length === 1) {
             status = 'waitingForPlayers';
           } else if (room.game.pendingNewGame && localPlayer === room.game.requestingPlayer) {
@@ -74,11 +88,13 @@ async function createServer() {
         } else {
           status = 'newPlayer';
         }
-        fn({
-          status,
-          game: room.game,
-          localPlayer
-        });
+        fn(
+          withChatPayload(room, {
+            status,
+            game: room.game,
+            localPlayer
+          })
+        );
       })
     );
 
@@ -107,16 +123,20 @@ async function createServer() {
         console.log(`add player to room ${room.code}`);
         const localPlayer = room.addPlayer({ player, socket });
         room.game.startGame();
+        room.addParticipantListMessage();
         // Automatically update first player's screen when second player joins
         localPlayer.broadcast('add-player', {
           status: 'addedPlayer',
-          game: room.game
-        });
-        fn({
-          status: 'startedGame',
           game: room.game,
-          localPlayer
+          messages: room.messages
         });
+        fn(
+          withChatPayload(room, {
+            status: 'startedGame',
+            game: room.game,
+            localPlayer
+          })
+        );
       })
     );
 
@@ -223,8 +243,88 @@ async function createServer() {
       })
     );
 
+    // Chat events
+
+    socket.on(
+      'register-spectator',
+      getRoom(({ room, spectator, spectatorId }, fn) => {
+        let localSpectator = null;
+        if (spectatorId) {
+          localSpectator = room.connectSpectator({ spectatorId, socket });
+        }
+        if (!localSpectator && spectator?.name) {
+          localSpectator = room.addSpectator({ spectator, socket });
+        }
+        if (!localSpectator) {
+          fn({ status: 'spectatorNotRegistered' });
+          return;
+        }
+        room.addParticipantListMessage();
+        fn(
+          withChatPayload(room, {
+            status: 'watchingGame',
+            game: room.game,
+            localSpectator
+          })
+        );
+      })
+    );
+
+    socket.on(
+      'send-chat-message',
+      getRoom(({ playerId, spectatorId, room, text }, fn) => {
+        const sanitizedText = sanitizeChatText(text);
+        if (!sanitizedText) {
+          fn({ status: 'emptyMessage' });
+          return;
+        }
+
+        const lastMessageAt = room.lastChatMessageAtBySocketId[socket.id] || 0;
+        if (Date.now() - lastMessageAt < CHAT_RATE_LIMIT_MS) {
+          fn({ status: 'rateLimited' });
+          return;
+        }
+        room.lastChatMessageAtBySocketId[socket.id] = Date.now();
+
+        let senderName;
+        let senderId;
+        if (playerId) {
+          const localPlayer = room.getPlayerById(playerId);
+          if (!localPlayer) {
+            fn({ status: 'notInRoom' });
+            return;
+          }
+          senderName = localPlayer.name;
+          senderId = localPlayer.id;
+        } else if (spectatorId) {
+          const localSpectator = room.getSpectatorById(spectatorId);
+          if (!localSpectator) {
+            fn({ status: 'notInRoom' });
+            return;
+          }
+          senderName = localSpectator.name;
+          senderId = localSpectator.id;
+        } else {
+          fn({ status: 'notInRoom' });
+          return;
+        }
+
+        const message = createChatMessage({
+          playerId: senderId,
+          playerName: senderName,
+          text: sanitizedText
+        });
+        room.addMessage(message);
+        room.broadcastToAll('chat-message', { message }, { excludeSocket: socket });
+        fn({ status: 'sentMessage', message });
+      })
+    );
+
     socket.on('disconnect', () => {
       console.log(`disconnected: ${socket.id}`);
+      if (socket.room) {
+        delete socket.room.lastChatMessageAtBySocketId[socket.id];
+      }
       // Indicate that this player is now disconnected
       if (socket.player) {
         console.log('unset player socket');
@@ -232,6 +332,8 @@ async function createServer() {
           disconnectedPlayer: socket.player
         });
         socket.player.socket = null;
+      } else if (socket.spectator) {
+        socket.spectator.socket = null;
       }
       // As soon as both players disconnect from the room (making it completely
       // empty), mark the room for deletion

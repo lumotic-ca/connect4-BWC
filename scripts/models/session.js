@@ -52,6 +52,23 @@ class Session {
     }
   }
 
+  getLocalSpectatorId() {
+    if (this.localSpectatorId) {
+      return this.localSpectatorId;
+    } else if (typeof sessionStorage !== 'undefined') {
+      return sessionStorage.getItem('c4-localSpectatorId');
+    } else {
+      return null;
+    }
+  }
+
+  setLocalSpectatorId(localSpectatorId) {
+    this.localSpectatorId = localSpectatorId;
+    if (typeof sessionStorage !== 'undefined') {
+      sessionStorage.setItem('c4-localSpectatorId', localSpectatorId);
+    }
+  }
+
   on(eventName, callback) {
     if (this.socket) {
       this.socket.on(eventName, (args = {}) => {
@@ -64,7 +81,14 @@ class Session {
 
   emit(eventName, data = {}, callback) {
     if (this.socket) {
-      data = Object.assign({ roomCode: this.roomCode, playerId: this.localPlayerId }, data);
+      data = Object.assign(
+        {
+          roomCode: this.roomCode,
+          playerId: this.getLocalPlayerId(),
+          spectatorId: this.getLocalSpectatorId()
+        },
+        data
+      );
       this.socket.emit(eventName, data, (args = {}) => {
         this.processArgs(args, callback);
       });
@@ -86,6 +110,14 @@ class Session {
     if (args.localPlayer) {
       this.setLocalPlayerId(args.localPlayer.id);
       this.localPlayer = args.localPlayer;
+    }
+    if (args.localSpectator) {
+      this.setLocalSpectatorId(args.localSpectator.id);
+      this.localSpectator = args.localSpectator;
+    }
+    if (args.messages) {
+      this.chatMessages = args.messages;
+      this.chatMessagesRevision = (this.chatMessagesRevision || 0) + 1;
     }
     if (callback) {
       callback(args);

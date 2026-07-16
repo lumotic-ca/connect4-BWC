@@ -4,12 +4,13 @@ import clsx from 'clsx';
 
 // The area of the game UI consisting of game UI controls and status messages
 class DashboardComponent {
-  view({ attrs: { game, session, roomCode } }) {
+  view({ attrs: { game, session, roomCode, onRegisterSpectator } }) {
     return (
       <div
         id="game-dashboard"
         className={clsx({
-          'prompting-for-input': session.status === 'newPlayer'
+          'prompting-for-input':
+            session.status === 'newPlayer' || session.status === 'spectatorRegistration'
         })}
       >
         <p id="game-message">
@@ -42,6 +43,10 @@ class DashboardComponent {
             `${session.reconnectedPlayer.name} has reconnected.`
           ) : session.status === 'newPlayer' ? (
             <label htmlFor="new-player-name">Enter your player name:</label>
+          ) : session.status === 'spectatorRegistration' ? (
+            <label htmlFor="spectator-name">Enter your spectator name:</label>
+          ) : session.status === 'watchingGame' ? (
+            'You are watching this game.'
           ) : session.status === 'requestingNewGame' ? (
             `Asking ${game.getOtherPlayer(game.requestingPlayer).name} to play again...`
           ) : session.status === 'newGameRequested' ? (
@@ -66,7 +71,12 @@ class DashboardComponent {
             'Game ended. Play again?'
           )}
         </p>
-        <DashboardControlsComponent game={game} session={session} roomCode={roomCode} />
+        <DashboardControlsComponent
+          game={game}
+          session={session}
+          roomCode={roomCode}
+          onRegisterSpectator={onRegisterSpectator}
+        />
       </div>
     );
   }

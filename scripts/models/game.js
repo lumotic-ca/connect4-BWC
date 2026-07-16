@@ -114,6 +114,9 @@ class Game extends Emitter {
             }
           })
         );
+      } else if (gameType === 'online' && players.length > 0) {
+        // Spectators can watch the game without controlling either side
+        this.players.push(...players.map((player) => new OnlinePlayer(player)));
       }
     } else if (gameType !== this.lastType) {
       // If user switches game type (e.g. from 1-Player to 2-Player mode),

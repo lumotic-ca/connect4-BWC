@@ -1,6 +1,7 @@
 import clsx from 'clsx';
 import m from 'mithril';
 import Game from '../models/game.js';
+import ChatBubbleComponent from './chat-bubble.jsx';
 import DashboardComponent from './dashboard.jsx';
 import GridComponent from './grid.jsx';
 import PlayerAreaComponent from './player-area.jsx';
@@ -30,7 +31,8 @@ class GameComponent {
     // Join the room immediately if a room code is specified in the URL; the
     // room code and local player ID are implicitly and automatically passed by
     // the Session class
-    this.session.emit('join-room', { roomCode }, ({ game, localPlayer }) => {
+    this.session.emit('join-room', { roomCode }, (args) => {
+      const { game, localPlayer, status } = args;
       if (game) {
         this.game.restoreFromServer({ game, localPlayer });
         if (localPlayer) {
@@ -40,13 +42,39 @@ class GameComponent {
           }
         }
       }
+      if (status === 'watchingGame' && !localPlayer) {
+        const spectatorId = this.session.getLocalSpectatorId();
+        if (spectatorId) {
+          this.registerSpectator({ spectatorId });
+        } else {
+          this.session.status = 'spectatorRegistration';
+        }
+      }
+      m.redraw();
+    });
+  }
+
+  registerSpectator({ name, spectatorId } = {}) {
+    const payload = spectatorId ? { spectatorId } : { spectator: { name } };
+    this.session.emit('register-spectator', payload, ({ game, localSpectator }) => {
+      if (game) {
+        this.game.restoreFromServer({ game, localPlayer: null });
+      }
+      if (localSpectator) {
+        this.session.localSpectator = localSpectator;
+      }
+      this.session.status = 'watchingGame';
       m.redraw();
     });
   }
 
   listenForOnlineGameEvents() {
     // When P2 joins an online game, automatically update P1's screen
-    this.session.on('add-player', ({ game, localPlayer }) => {
+    this.session.on('add-player', ({ game, localPlayer, messages }) => {
+      if (messages) {
+        this.session.chatMessages = messages;
+        this.session.chatMessagesRevision = (this.session.chatMessagesRevision || 0) + 1;
+      }
       this.game.restoreFromServer({ game, localPlayer });
       m.redraw();
     });
@@ -101,19 +129,29 @@ class GameComponent {
   }
 
   view({ attrs: { roomCode } }) {
+    const showOnlineChat = Boolean(roomCode && this.session.connected);
+    const showReactions =
+      this.session.connected && this.game.players.length === 2 && this.session.localPlayer;
+
     return (
       <div id="game" className={clsx({ 'in-progress': this.game.inProgress })}>
         <div className="game-column">
           <h1>Connect Four</h1>
-          <DashboardComponent game={this.game} session={this.session} roomCode={roomCode} />
+          <DashboardComponent
+            game={this.game}
+            session={this.session}
+            roomCode={roomCode}
+            onRegisterSpectator={({ name }) => this.registerSpectator({ name })}
+          />
         </div>
         <div className="game-column">
           <GridComponent game={this.game} session={this.session} />
           <PlayerAreaComponent game={this.game} session={this.session} />
-          {this.session.connected && this.game.players.length === 2 ? (
+          {showReactions ? (
             <ReactionPickerComponent game={this.game} session={this.session} />
           ) : null}
         </div>
+        {showOnlineChat ? <ChatBubbleComponent session={this.session} /> : null}
       </div>
     );
   }

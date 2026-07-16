@@ -135,10 +135,37 @@ class DashboardControlsComponent {
     });
   }
 
-  view({ attrs: { roomCode } }) {
+  setSpectatorName(inputEvent) {
+    this.spectatorName = inputEvent.target.value.trim();
+    inputEvent.redraw = false;
+  }
+
+  submitSpectatorRegistration(submitEvent) {
+    submitEvent.preventDefault();
+    if (this.attrs.onRegisterSpectator) {
+      this.attrs.onRegisterSpectator({ name: this.spectatorName });
+    }
+  }
+
+  view(vnode) {
+    this.attrs = vnode.attrs;
+    const { roomCode } = vnode.attrs;
     return (
       <div id="dashboard-controls">
-        {this.session.status === 'newPlayer' ? (
+        {this.session.status === 'spectatorRegistration' ? (
+          <form action onsubmit={(submitEvent) => this.submitSpectatorRegistration(submitEvent)}>
+            <input
+              type="text"
+              autoComplete="off"
+              id="spectator-name"
+              name="spectator-name"
+              autoFocus
+              required
+              oninput={(inputEvent) => this.setSpectatorName(inputEvent)}
+            />
+            <button type="submit">Join as Spectator</button>
+          </form>
+        ) : this.session.status === 'newPlayer' ? (
           <form action onsubmit={(submitEvent) => this.submitNewPlayer(submitEvent, roomCode)}>
             <input
               type="text"
