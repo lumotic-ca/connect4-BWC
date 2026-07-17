@@ -1,6 +1,11 @@
 import moment from 'moment';
 
-import { MAX_CHAT_MESSAGES, createChatMessage, formatParticipantList } from './chat.js';
+import {
+  MAX_CHAT_MESSAGES,
+  CHAT_TYPING_TIMEOUT_MS,
+  createChatMessage,
+  formatParticipantList
+} from './chat.js';
 import Player from './player.js';
 import Game from './game.js';
 import Spectator from './spectator.js';
@@ -19,6 +24,9 @@ class Room {
     this.lastMarkedInactive = null;
     // Per-socket rate limiting timestamps for chat
     this.lastChatMessageAtBySocketId = {};
+    // Active typing indicators keyed by participant ID
+    this.typingParticipants = {};
+    this.typingTimeouts = {};
   }
 
   addPlayer({ player, socket }) {
@@ -113,6 +121,36 @@ class Room {
       if (participant.socket && participant.socket !== excludeSocket) {
         participant.socket.emit(eventName, data);
       }
+    });
+  }
+
+  // Track whether a participant is currently typing in chat
+  setParticipantTyping({ participantId, playerName, typing }) {
+    clearTimeout(this.typingTimeouts[participantId]);
+
+    if (typing) {
+      this.typingParticipants[participantId] = playerName;
+      this.typingTimeouts[participantId] = setTimeout(() => {
+        delete this.typingParticipants[participantId];
+        delete this.typingTimeouts[participantId];
+        this.broadcastToAll('chat-typing', {
+          playerId: participantId,
+          playerName,
+          typing: false
+        });
+      }, CHAT_TYPING_TIMEOUT_MS);
+      return;
+    }
+
+    delete this.typingParticipants[participantId];
+    delete this.typingTimeouts[participantId];
+  }
+
+  clearParticipantTyping(participantId) {
+    this.setParticipantTyping({
+      participantId,
+      playerName: this.typingParticipants[participantId],
+      typing: false
     });
   }
 

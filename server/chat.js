@@ -9,6 +9,9 @@ export const MAX_CHAT_MESSAGE_LENGTH = 500;
 // Minimum interval between messages from the same socket (ms)
 export const CHAT_RATE_LIMIT_MS = 500;
 
+// How long a typing indicator remains visible without refresh (ms)
+export const CHAT_TYPING_TIMEOUT_MS = 3000;
+
 // Remove unsafe content and enforce length limits on user-submitted chat text
 export function sanitizeChatText(text) {
   if (typeof text !== 'string') {

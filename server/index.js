@@ -1,7 +1,12 @@
 import open from 'open';
 import { Server } from 'socket.io';
 
-import { CHAT_RATE_LIMIT_MS, createChatMessage, sanitizeChatText } from './chat.js';
+import {
+  CHAT_RATE_LIMIT_MS,
+  CHAT_TYPING_TIMEOUT_MS,
+  createChatMessage,
+  sanitizeChatText
+} from './chat.js';
 import createHttpServer from './http-server.js';
 import { roomManager } from './room-manager.js';
 
@@ -10,6 +15,25 @@ function withChatPayload(room, payload) {
   return Object.assign(payload, {
     messages: room.messages
   });
+}
+
+// Resolve the chat sender from a player or spectator socket payload
+function resolveChatSender({ room, playerId, spectatorId }) {
+  if (playerId) {
+    const localPlayer = room.getPlayerById(playerId);
+    if (!localPlayer) {
+      return null;
+    }
+    return { id: localPlayer.id, name: localPlayer.name };
+  }
+  if (spectatorId) {
+    const localSpectator = room.getSpectatorById(spectatorId);
+    if (!localSpectator) {
+      return null;
+    }
+    return { id: localSpectator.id, name: localSpectator.name };
+  }
+  return null;
 }
 
 // Socket.IO server
@@ -286,37 +310,49 @@ async function createServer() {
         }
         room.lastChatMessageAtBySocketId[socket.id] = Date.now();
 
-        let senderName;
-        let senderId;
-        if (playerId) {
-          const localPlayer = room.getPlayerById(playerId);
-          if (!localPlayer) {
-            fn({ status: 'notInRoom' });
-            return;
-          }
-          senderName = localPlayer.name;
-          senderId = localPlayer.id;
-        } else if (spectatorId) {
-          const localSpectator = room.getSpectatorById(spectatorId);
-          if (!localSpectator) {
-            fn({ status: 'notInRoom' });
-            return;
-          }
-          senderName = localSpectator.name;
-          senderId = localSpectator.id;
-        } else {
+        const sender = resolveChatSender({ room, playerId, spectatorId });
+        if (!sender) {
           fn({ status: 'notInRoom' });
           return;
         }
 
+        room.clearParticipantTyping(sender.id);
+
         const message = createChatMessage({
-          playerId: senderId,
-          playerName: senderName,
+          playerId: sender.id,
+          playerName: sender.name,
           text: sanitizedText
         });
         room.addMessage(message);
         room.broadcastToAll('chat-message', { message }, { excludeSocket: socket });
         fn({ status: 'sentMessage', message });
+      })
+    );
+
+    socket.on(
+      'chat-typing',
+      getRoom(({ playerId, spectatorId, room, typing }, fn) => {
+        const sender = resolveChatSender({ room, playerId, spectatorId });
+        if (!sender) {
+          fn({ status: 'notInRoom' });
+          return;
+        }
+
+        room.setParticipantTyping({
+          participantId: sender.id,
+          playerName: sender.name,
+          typing: Boolean(typing)
+        });
+        room.broadcastToAll(
+          'chat-typing',
+          {
+            playerId: sender.id,
+            playerName: sender.name,
+            typing: Boolean(typing)
+          },
+          { excludeSocket: socket }
+        );
+        fn({});
       })
     );
 
@@ -328,11 +364,13 @@ async function createServer() {
       // Indicate that this player is now disconnected
       if (socket.player) {
         console.log('unset player socket');
+        socket.room?.clearParticipantTyping(socket.player.id);
         socket.player.broadcast('player-disconnected', {
           disconnectedPlayer: socket.player
         });
         socket.player.socket = null;
       } else if (socket.spectator) {
+        socket.room?.clearParticipantTyping(socket.spectator.id);
         socket.spectator.socket = null;
       }
       // As soon as both players disconnect from the room (making it completely
