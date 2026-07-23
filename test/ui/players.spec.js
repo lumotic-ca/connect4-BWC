@@ -34,6 +34,35 @@ test.describe('game UI', async () => {
     await expect(page.locator('#room-code-error')).toHaveText('Enter a 4-letter room code.');
   });
 
+  test('should navigate to room URL and prompt for player name after joining with code', async ({
+    browser
+  }) => {
+    const hostContext = await browser.newContext();
+    const guestContext = await browser.newContext();
+    const hostPage = await hostContext.newPage();
+    const guestPage = await guestContext.newPage();
+
+    await hostPage.goto('./');
+    await hostPage.getByRole('button', { name: '2 Players' }).click();
+    await hostPage.getByRole('button', { name: 'Different device' }).click();
+    await hostPage.locator('#new-player-name').fill('Host');
+    await hostPage.getByRole('button', { name: 'Start Game' }).click();
+    await expect(hostPage).toHaveURL(/\/room\/[A-Z]{4}$/);
+
+    const roomCode = hostPage.url().match(/\/room\/([A-Z]{4})$/)[1];
+
+    await guestPage.goto('./');
+    await guestPage.getByRole('button', { name: 'Join with code' }).click();
+    await guestPage.locator('#room-code').fill(roomCode);
+    await guestPage.getByRole('button', { name: 'Join' }).click();
+    await expect(guestPage).toHaveURL(new RegExp(`/room/${roomCode}$`));
+    await expect(guestPage.locator('#game-message label')).toHaveText('Enter your player name:');
+    await expect(guestPage.locator('#new-player-name')).toBeVisible();
+
+    await hostContext.close();
+    await guestContext.close();
+  });
+
   test('should start with Human when chosen in 1-Player mode', async ({ page }) => {
     await page.getByRole('button', { name: '1 Player' }).click();
     await page.getByRole('button', { name: 'Human' }).click();

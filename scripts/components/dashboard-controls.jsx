@@ -99,13 +99,17 @@ class DashboardControlsComponent {
 
   submitRoomCode(submitEvent) {
     submitEvent.preventDefault();
-    const normalizedCode = normalizeRoomCode(this.roomCodeInput || '');
+    const roomCodeInput = submitEvent.target.querySelector('#room-code');
+    const rawValue = this.roomCodeInput ?? roomCodeInput?.value ?? '';
+    const normalizedCode = normalizeRoomCode(rawValue);
     if (!isValidRoomCode(normalizedCode)) {
       this.session.roomCodeError = `Enter a ${ROOM_CODE_LENGTH}-letter room code.`;
       m.redraw();
       return;
     }
-    m.route.set(`/room/${normalizedCode}`);
+    // Full navigation remounts the app so join-room runs with the new room code.
+    // m.route.set() reuses the same component instance and leaves join stuck.
+    window.location.assign(`/room/${normalizedCode}`);
   }
 
   // Start a same-device game using the original local two-human-player mode.
