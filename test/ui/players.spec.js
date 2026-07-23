@@ -20,6 +20,20 @@ test.describe('game UI', async () => {
     await expect(page.locator('#new-player-name')).toBeVisible();
   });
 
+  test('should show room code entry from device choice screen', async ({ page }) => {
+    await page.getByRole('button', { name: '2 Players' }).click();
+    await page.getByRole('button', { name: 'Join with code' }).click();
+    await expect(page.locator('#game-message label')).toHaveText('Enter the 4-letter room code:');
+    await expect(page.locator('#room-code')).toBeVisible();
+  });
+
+  test('should show validation error for invalid room code', async ({ page }) => {
+    await page.getByRole('button', { name: 'Join with code' }).click();
+    await page.locator('#room-code').fill('AB');
+    await page.getByRole('button', { name: 'Join' }).click();
+    await expect(page.locator('#room-code-error')).toHaveText('Enter a 4-letter room code.');
+  });
+
   test('should start with Human when chosen in 1-Player mode', async ({ page }) => {
     await page.getByRole('button', { name: '1 Player' }).click();
     await page.getByRole('button', { name: 'Human' }).click();

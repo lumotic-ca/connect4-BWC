@@ -37,4 +37,10 @@
       padding-bottom: 10px;
     }
   }
+  .form-error {
+    display: block;
+    color: var(--button-warn-background-color);
+    font-size: 0.9em;
+    margin-top: 4px;
+  }
 }

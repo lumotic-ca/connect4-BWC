@@ -1,5 +1,6 @@
 /* global ga, gtag */
 import m from 'mithril';
+import { isValidRoomCode, normalizeRoomCode, ROOM_CODE_LENGTH } from '../models/room-code.js';
 
 class DashboardControlsComponent {
   oninit({ attrs: { game, session } }) {
@@ -74,6 +75,39 @@ class DashboardControlsComponent {
     this.session.status = null;
   }
 
+  // Show the room code entry form from the home screen or device choice screen.
+  promptToJoinRoomWithCode(origin) {
+    this.roomCodeEntryOrigin = origin;
+    delete this.roomCodeInput;
+    delete this.session.roomCodeError;
+    this.session.status = 'enteringRoomCode';
+  }
+
+  // Return from the room code entry form to the screen it was opened from.
+  cancelRoomCodeEntry() {
+    delete this.roomCodeInput;
+    delete this.session.roomCodeError;
+    this.session.status =
+      this.roomCodeEntryOrigin === 'deviceChoice' ? 'choosingTwoPlayerDevice' : null;
+  }
+
+  setRoomCodeInput(inputEvent) {
+    this.roomCodeInput = inputEvent.target.value;
+    delete this.session.roomCodeError;
+    inputEvent.redraw = false;
+  }
+
+  submitRoomCode(submitEvent) {
+    submitEvent.preventDefault();
+    const normalizedCode = normalizeRoomCode(this.roomCodeInput || '');
+    if (!isValidRoomCode(normalizedCode)) {
+      this.session.roomCodeError = `Enter a ${ROOM_CODE_LENGTH}-letter room code.`;
+      m.redraw();
+      return;
+    }
+    m.route.set(`/room/${normalizedCode}`);
+  }
+
   // Start a same-device game using the original local two-human-player mode.
   startSameDeviceGame() {
     this.session.status = null;
@@ -135,38 +169,55 @@ class DashboardControlsComponent {
     });
   }
 
-  // Copy the invite link, using a fallback when Clipboard API is unavailable
-  async copyShareLink() {
-    const shareLink = window.location.href;
-    const shareInput = document.getElementById('share-link');
+  // Copy text to the clipboard, using a fallback when Clipboard API is unavailable
+  async copyToClipboard({ text, fallbackInputId, feedbackKey }) {
+    const fallbackInput = fallbackInputId ? document.getElementById(fallbackInputId) : null;
     let copied = false;
 
     if (navigator.clipboard?.writeText) {
       try {
-        await navigator.clipboard.writeText(shareLink);
+        await navigator.clipboard.writeText(text);
         copied = true;
       } catch {
         // Clipboard API can fail outside secure contexts; use fallback below.
       }
     }
 
-    if (!copied && shareInput) {
-      shareInput.focus();
-      shareInput.select();
-      shareInput.setSelectionRange(0, shareLink.length);
+    if (!copied && fallbackInput) {
+      fallbackInput.focus();
+      fallbackInput.select();
+      fallbackInput.setSelectionRange(0, text.length);
       copied = document.execCommand('copy');
     }
 
     if (copied) {
-      this.copyFeedback = 'Copied!';
-      clearTimeout(this.copyFeedbackTimer);
-      this.copyFeedbackTimer = setTimeout(() => {
-        delete this.copyFeedback;
+      this[feedbackKey] = 'Copied!';
+      clearTimeout(this[`${feedbackKey}Timer`]);
+      this[`${feedbackKey}Timer`] = setTimeout(() => {
+        delete this[feedbackKey];
         m.redraw();
       }, DashboardControlsComponent.copyFeedbackDuration);
     }
 
     m.redraw();
+  }
+
+  // Copy the invite link for the host waiting screen
+  copyShareLink() {
+    return this.copyToClipboard({
+      text: window.location.href,
+      fallbackInputId: 'share-link',
+      feedbackKey: 'copyFeedback'
+    });
+  }
+
+  // Copy just the room code for the host waiting screen
+  copyRoomCode(roomCode) {
+    return this.copyToClipboard({
+      text: roomCode,
+      fallbackInputId: 'room-code-display',
+      feedbackKey: 'copyCodeFeedback'
+    });
   }
 
   setSpectatorName(inputEvent) {
@@ -199,6 +250,25 @@ class DashboardControlsComponent {
             />
             <button type="submit">Join as Spectator</button>
           </form>
+        ) : this.session.status === 'enteringRoomCode' ? (
+          <form action onsubmit={(submitEvent) => this.submitRoomCode(submitEvent)}>
+            <input
+              type="text"
+              autoComplete="off"
+              id="room-code"
+              name="room-code"
+              autoFocus
+              required
+              maxLength={ROOM_CODE_LENGTH}
+              aria-invalid={this.session.roomCodeError ? 'true' : null}
+              aria-describedby={this.session.roomCodeError ? 'room-code-error' : null}
+              oninput={(inputEvent) => this.setRoomCodeInput(inputEvent)}
+            />
+            <button type="submit">Join</button>
+            <button type="button" className="go-back" onclick={() => this.cancelRoomCodeEntry()}>
+              Back
+            </button>
+          </form>
         ) : this.session.status === 'newPlayer' ? (
           <form action onsubmit={(submitEvent) => this.submitNewPlayer(submitEvent, roomCode)}>
             <input
@@ -219,16 +289,30 @@ class DashboardControlsComponent {
           </form>
         ) : this.session.status === 'waitingForPlayers' ? (
           <div id="share-controls">
-            <input
-              type="text"
-              readOnly
-              id="share-link"
-              value={window.location.href}
-              onclick={({ target }) => target.select()}
-            />
-            <button type="button" id="copy-share-link" onclick={() => this.copyShareLink()}>
-              {this.copyFeedback || 'Copy'}
-            </button>
+            <div className="share-row">
+              <input
+                type="text"
+                readOnly
+                id="room-code-display"
+                value={roomCode}
+                onclick={({ target }) => target.select()}
+              />
+              <button type="button" id="copy-room-code" onclick={() => this.copyRoomCode(roomCode)}>
+                {this.copyCodeFeedback || 'Copy code'}
+              </button>
+            </div>
+            <div className="share-row">
+              <input
+                type="text"
+                readOnly
+                id="share-link"
+                value={window.location.href}
+                onclick={({ target }) => target.select()}
+              />
+              <button type="button" id="copy-share-link" onclick={() => this.copyShareLink()}>
+                {this.copyFeedback || 'Copy'}
+              </button>
+            </div>
           </div>
         ) : this.game.inProgress &&
           this.session.status !== 'watchingGame' &&
@@ -291,6 +375,9 @@ class DashboardControlsComponent {
             <>
               <button onclick={() => this.startSameDeviceGame()}>Same device</button>
               <button onclick={() => this.promptToStartOnlineGame()}>Different device</button>
+              <button onclick={() => this.promptToJoinRoomWithCode('deviceChoice')}>
+                Join with code
+              </button>
               <button className="go-back" onclick={() => this.cancelTwoPlayerDevicePrompt()}>
                 Back
               </button>
@@ -299,6 +386,7 @@ class DashboardControlsComponent {
             <>
               <button onclick={() => this.setPlayers({ gameType: '1P' })}>1 Player</button>
               <button onclick={() => this.promptForTwoPlayerDevice()}>2 Players</button>
+              <button onclick={() => this.promptToJoinRoomWithCode('home')}>Join with code</button>
             </>
           )
         ) : null}

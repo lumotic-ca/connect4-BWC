@@ -56,10 +56,32 @@ input[type='text'] {
 
 #share-controls {
   display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.share-row {
+  display: flex;
   justify-content: center;
   align-items: stretch;
   position: relative;
+}
+#room-code {
+  display: block;
+  width: 80px;
+  margin: 0 auto;
   margin-bottom: 10px;
+  font-family: monospace;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
+#room-code-display {
+  width: 80px;
+  font-family: monospace;
+  font-size: 16px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
 }
 #share-link {
   width: 150px;

@@ -10,7 +10,9 @@ class DashboardComponent {
         id="game-dashboard"
         className={clsx({
           'prompting-for-input':
-            session.status === 'newPlayer' || session.status === 'spectatorRegistration'
+            session.status === 'newPlayer' ||
+            session.status === 'spectatorRegistration' ||
+            session.status === 'enteringRoomCode'
         })}
       >
         <p id="game-message">
@@ -43,6 +45,15 @@ class DashboardComponent {
             `${session.reconnectedPlayer.name} has reconnected.`
           ) : session.status === 'newPlayer' ? (
             <label htmlFor="new-player-name">Enter your player name:</label>
+          ) : session.status === 'enteringRoomCode' ? (
+            <>
+              <label htmlFor="room-code">Enter the 4-letter room code:</label>
+              {session.roomCodeError ? (
+                <span id="room-code-error" className="form-error">
+                  {session.roomCodeError}
+                </span>
+              ) : null}
+            </>
           ) : session.status === 'spectatorRegistration' ? (
             <label htmlFor="spectator-name">Enter your spectator name:</label>
           ) : session.status === 'watchingGame' ? (
