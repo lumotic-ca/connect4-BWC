@@ -23,6 +23,22 @@ podman run --rm -p 9001:9001 -e PORT=9001 -e NODE_ENV=production -e DISABLE_SSL=
 
 Then open `http://localhost:9001`.
 
+### Persistent deployment (recommended)
+
+For a host that survives reboots (for example behind Cloudflare Tunnel at `c4.zots.ca`):
+
+```bash
+./scripts/connect4-podman.sh deploy
+```
+
+This installs a systemd Quadlet unit, enables `connect4-bwc.service`, and verifies that port 9001 is reachable on the host — not just inside the container.
+
+If the public URL returns 502 while the container looks healthy, see [docs/cloudflare-tunnel-troubleshooting.md](docs/cloudflare-tunnel-troubleshooting.md) and run:
+
+```bash
+./scripts/connect4-podman.sh repair
+```
+
 ## Run the project locally
 
 ### 1. Install global dependencies

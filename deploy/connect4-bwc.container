@@ -1,0 +1,18 @@
+[Unit]
+Description=Connect Four BwC (rootless Podman Quadlet)
+Wants=network-online.target
+After=network-online.target
+
+[Container]
+ContainerName=connect4-bwc
+Image=localhost/connect4-bwc:latest
+PublishPort=9001:9001/tcp
+Environment=PORT=9001
+Environment=NODE_ENV=production
+Environment=DISABLE_SSL=1
+
+[Service]
+Restart=always
+
+[Install]
+WantedBy=default.target
